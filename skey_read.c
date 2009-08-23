@@ -16,21 +16,19 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include "dict.h"
 
 int dict_search(char *word)
 {
 	int i;
-	char *word_copy = (char*) malloc(strlen(word));
-	for (i = 0; word[i] > 0; i++) {
+	char word_copy[5];
+	for (i = 0; i < 5 && word[i] > 0; i++) {
 		word_copy[i] = word[i];
 		if (word[i] <= 'z' && word[i] >= 'a') {
 			word_copy[i] += ('A' - 'a');
 		} else if (word[i] < 'A' || word[i] > 'z' || (word[i] > 'Z' && word[i] < 'a')) {
 			fprintf(stderr, "char out of bounds: %c\n", word[i]);
-			free(word_copy);
 			return -2;
 		}
 	}
@@ -38,12 +36,10 @@ int dict_search(char *word)
 
 	for (i = 0; i < 2048; i++) {
 		if (strcmp(dict[i], word_copy) == 0) {
-			free(word_copy);
 			return i;
 		}
 	}
 
-	free(word_copy);
 	return -1;
 }
 
@@ -74,23 +70,22 @@ int combine_chunks(int chunkbits, int num_chunks, void *combined, unsigned long 
 
 int main(int argc, char **argv)
 {
-	int i, out;
+	int i, j, out;
 
 	int temp;
 	unsigned char combined[9]; // need two bits form #9
 	unsigned long chunks[6];
-	char *words[6];
-
-	for (i = 0; i < 6; i++) {
-		words[i] = (char*) malloc(5);
-	}
+	char words[6][5];
 
 	if (argc < 7) {
 		fprintf(stderr, "enter s/key: ");
 		scanf("%4s %4s %4s %4s %4s %4s", words[0], words[1], words[2], words[3], words[4], words[5]);
 	} else {
-		for (i = 0; i < 6; i++)
-			words[i] = argv[i+1];
+		for (i = 0; i < 6; i++) {
+			for (j = 0; j < 5 && argv[i+1][j]; j++)
+				words[i][j] = argv[i+1][j];
+			words[i][j] = '\0';
+		}
 	}
 	
 	for (i = 0; i < 6; i++) {
@@ -105,7 +100,6 @@ int main(int argc, char **argv)
 	out = combine_chunks(11, 6, (void*) combined, chunks);
 
 	/*
-	int j;
 	for (i = 0; i < 6; i++) {
 		printf("chunk %d: %lu:\t", i, chunks[i]);
 		for (j = 10; j >= 0; j--) {
@@ -128,12 +122,6 @@ int main(int argc, char **argv)
                 printf("%.2x", combined[i]);
         }
 	printf("\n");
-
-	if (argc < 7) {
-		for (i = 0; i < 6; i++) {
-			free(words[i]);
-		}
-	}
 
 	return 0;
 }

@@ -9,8 +9,6 @@ Cygwin; should work just about anywhere.
 
 Dependencies: mhash, and a not-broken libc implementation :)
 
-BUGS: s/key generation using the otp-sha1 hash is broken and I don't know why.
-
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
     * Redistributions of source code must retain the above copyright

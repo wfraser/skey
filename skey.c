@@ -27,25 +27,27 @@
  */
 void hash_finalize(int hash, char *input, char **output)
 {
-	int i;
+	int i, j, oversize;
 
 	*output = (char*) malloc(8);
 
-	switch (hash) {
-	case MHASH_MD5:
-	case MHASH_MD4:
+	oversize = mhash_get_block_size(hash) - 8;
+	for (i = 0; i < oversize; i++) {
+		input[(i%8)] ^= input[(i+8)];
+	}
+
+	if (hash == MHASH_SHA1) {
+		// each group of 4 bytes has the bytes in reverse order
+		// wtf.
+		for (i = 0; i < 2; i++) {
+			for (j = 0; j < 4; j++) {
+				(*output)[i*4+j] = input[(i+1)*4-j-1];
+			}
+		}
+	} else {
 		for (i = 0; i < 8; i++) {
-			(*output)[i] = input[i] ^ input[i+8];
+			(*output)[i] = input[i];
 		}
-		break;
-	case MHASH_SHA1: //XXX THIS DOES NOT WORK AND I DO NOT KNOW WHY
-		for (i = 0; i < 8; i++) {
-			(*output)[i] = input[i] ^ input[i+8];
-		}
-		for (i = 0; i < 4; i++) {
-			(*output)[i] ^= input[i+16];
-		}
-		break;
 	}
 }
 

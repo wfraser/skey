@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "dict.h"
+#include "version.h"
 
 int dict_search(char *word)
 {
@@ -77,6 +78,20 @@ int main(int argc, char **argv)
 	unsigned long chunks[6];
 	char words[6][5];
 
+	if (argc == 2 && (
+			strcmp(argv[1], "--help") == 0
+			|| strcmp(argv[1], "-h") == 0
+	)) {
+		fprintf(stderr, "s/key read v%u.%u", VERSION_MAJOR,
+				VERSION_RELEASE);
+		if (VERSION_BUILD != 0)
+			fprintf(stderr, ".%u", VERSION_BUILD);
+		fprintf(stderr, " (c) 2009 by William R. Fraser\n");
+		fprintf(stderr, "usage: %s [<word1> <word2> <word3> <word4> "
+				"<word5> <word6>]\n", argv[0]);
+		return -1;
+	}
+
 	if (argc < 7) {
 		fprintf(stderr, "enter s/key: ");
 		scanf("%4s %4s %4s %4s %4s %4s", words[0], words[1], words[2], words[3], words[4], words[5]);
@@ -92,7 +107,7 @@ int main(int argc, char **argv)
 		temp = dict_search(words[i]);
 		if (temp < 0) {
 			fprintf(stderr, "unknown word \"%s\" in input\n", words[i]);
-			return -1;
+			return -2;
 		} 
 		chunks[i] = (unsigned long) temp;
 	}

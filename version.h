@@ -1,0 +1,6 @@
+#ifndef WRF_SKEY_VERSION_H
+#define WRF_SKEY_VERSION_H
+#define VERSION_MAJOR 1
+#define VERSION_RELEASE 0
+#define VERSION_BUILD 0
+#endif

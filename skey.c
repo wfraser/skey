@@ -20,6 +20,7 @@
 #include <math.h>
 #include <mhash.h>
 #include "dict.h"
+#include "version.h"
 
 /*
  * fold the hash down to 64 bits
@@ -209,6 +210,10 @@ int main(int argc, char **argv, char **envp)
 	unsigned long chunks[6];
 
 	if (argc < 3) {
+		fprintf(stderr, "s/key v%u.%u", VERSION_MAJOR, VERSION_RELEASE);
+		if (VERSION_BUILD != 0)
+			fprintf(stderr, ".%u", VERSION_BUILD);
+		fprintf(stderr, " (c) 2009 by William R. Fraser\n");
 		fprintf(stderr, "usage: %s [otp-<hash>] <rounds> <seed>\n", argv[0]);
 		return 1;
 	}

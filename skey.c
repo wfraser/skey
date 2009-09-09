@@ -1,7 +1,9 @@
 /*
  * S/Key OTP Calculator (RFC 2289)
  * 
- * by William R. Fraser 7/20/2009
+ * (c) William R. Fraser 2009
+ * v1.0.0 7/20/2009 (first release)
+ * v1.1.0 9/8/2009 (current release)
  *
  * compile with:
  *	gcc -Wall -o skey -lmhash -lm skey.c
@@ -19,8 +21,63 @@
 #include <stdlib.h>
 #include <math.h>
 #include <mhash.h>
+#include <string.h>
+#include <termios.h>
 #include "dict.h"
 #include "version.h"
+
+/*
+ * Read a password from the terminal, after printing prompt.
+ * After calling, secret is allocated to the correct size, and that size is
+ * stored in secret_sz.
+ * In case of badness, prints a helpful message and returns with secret set to
+ * NULL.
+ */
+void skey_getpass(const char *prompt, char **secret, int *secret_sz)
+{
+	char c;
+	int alloc = 256;
+	struct termios old, new;
+
+	*secret = (char*)malloc(alloc);
+	*secret_sz = 0;
+
+	printf("%s", prompt);
+
+	/*
+	 * Disable echoing input to screen. This stanza is from
+	 * http://www.gnu.org/software/libc/manual/html_node/getpass.html
+	 * because getpass(3) is missing on many systems, notably Cygwin.
+	 */
+	tcgetattr(fileno(stdin), &old);
+	new = old;
+	new.c_lflag &= ~ECHO;
+	tcsetattr(fileno(stdin), TCSAFLUSH, &new);
+	
+	while (!feof(stdin) && !ferror(stdin)) {
+		c = getc(stdin);
+
+		if ((*secret_sz) + 1 == alloc) {
+			*secret = (char*)realloc(*secret, alloc+=256);
+			if (*secret == NULL) {
+				perror("error allocating password buffer");
+				tcsetattr(fileno(stdin), TCSAFLUSH, &old);
+				return;
+			}
+		}
+
+		if (c == EOF || c == '\n') {
+			(*secret)[*secret_sz] = '\0';
+			tcsetattr(fileno(stdin), TCSAFLUSH, &old);
+			return;
+		} else {
+			(*secret)[(*secret_sz)++] = c;
+		}
+	}
+
+	// can't get here
+	return;
+}
 
 /*
  * fold the hash down to 64 bits
@@ -116,10 +173,11 @@ void data_chunk(int chunkbits, int inputsz, void *hash, unsigned long chunks[])
 	out = 0;
 	bits_in = 0;
 	bits_out = 0;
+	chunks[0] = 0;
 
 	/* dribble bits into buckets, making sure to change the buckets when
 	 * they become full */
-	while (true) {
+	while (1) {
 		bit = (*((unsigned char *) hash + in) & (1 << (7 - bits_in))) >> (7 - bits_in);
 		chunks[out] |= bit << ((chunkbits - 1) - bits_out);
 		bits_in++;
@@ -245,9 +303,8 @@ int main(int argc, char **argv, char **envp)
 
 	input_sz = strlen(argv[2]);
 
-	/* POSIX says getpass() is deprecated? Why? */
-	secret = getpass("Secret: ");
-	secret_sz = strlen(secret);
+	/* Use our version of getpass() */
+	skey_getpass("Secret: ", &secret, &secret_sz);
 
 	/* concatenate secret onto the end of the seed */
 	input = (char*) malloc(input_sz + secret_sz + 1);

@@ -1,7 +1,7 @@
 all: skey skey_read
 
 skey: skey.o
-	gcc -o skey -lmhash -lm skey.o
+	gcc -o skey skey.o -lmhash
 
 skey.o: skey.c dict.h
 	gcc -c -o skey.o -Wall skey.c

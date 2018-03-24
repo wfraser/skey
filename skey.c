@@ -2,11 +2,12 @@
  * S/Key OTP Calculator (RFC 2289)
  * 
  * (c) William R. Fraser 2009
- * v1.0.0 7/20/2009 (first release)
- * v1.1.0 9/8/2009 (current release)
+ * v1.0.0 2009-07-20 (first release)
+ * v1.1.0 2009-09-08 cygwin bugfixes
+ * v1.1.1 2018-03-24 minor code cleanup (current release)
  *
  * compile with:
- *	gcc -Wall -o skey -lmhash -lm skey.c
+ *	gcc -o skey skey.c -lmhash
  *
  * usage: skey [otp-<hash>] <rounds> <seed>
  *
@@ -33,10 +34,10 @@
  * In case of badness, prints a helpful message and returns with secret set to
  * NULL.
  */
-void skey_getpass(const char *prompt, char **secret, int *secret_sz)
+void skey_getpass(const char *prompt, char **secret, size_t *secret_sz)
 {
 	char c;
-	int alloc = 256;
+	size_t alloc = 256;
 	struct termios old, new;
 
 	*secret = (char*)malloc(alloc);
@@ -141,7 +142,7 @@ int do_hash(int hash, int rounds, char *input, size_t input_sz, char **output, s
  */
 void hash_hex(char *input, size_t input_sz, char **output, size_t *output_sz)
 {
-	int i;
+	size_t i;
 
 	*output = (char*) malloc(2 * input_sz + 1);
 	
@@ -220,47 +221,7 @@ void hash_break(void *hash, unsigned long chunks[6])
 	chunks[5] |= checksum & 3;
 }
 
-#if 0
-/*
- * Another way of doing this, using unsigned long longs. This method sucks.
- */
-void xx_hash_break(unsigned long long int hash, unsigned long chunks[6])
-{
-	int i, checksum;
-	unsigned int check = 0x0A0B;
-	
-	/* little endian is a pain
-	 * determine byte sex by looking down int's skirt */
-	if (*((unsigned char *)(&check)) == 0x0B) {
-		hash = (hash << 56) | 
-        		((hash << 40) & 0x00FF000000000000ULL) |
-        		((hash << 24) & 0x0000FF0000000000ULL) |
-        		((hash << 8)  & 0x000000FF00000000ULL) |
-        		((hash >> 8)  & 0x00000000FF000000ULL) |
-        		((hash >> 24) & 0x0000000000FF0000ULL) |
-        		((hash >> 40) & 0x000000000000FF00ULL) |
-        		(hash >> 56);
-	}
-
-	chunks[0] = (hash & 0xff80000000000000ULL) >> 53; /* top 11 bits      */
-	chunks[1] = (hash & 0x007ff00000000000ULL) >> 42; /* next 11 bits     */
-	chunks[2] = (hash & 0x00000ffe00000000ULL) >> 31; /* ... etc.         */
-	chunks[3] = (hash & 0x00000001ffc00000ULL) >> 20;
-	chunks[4] = (hash & 0x00000000003ff800ULL) >> 9;
-	chunks[5] = (hash & 0x00000000000007ffULL) << 2; /* two left over     */
-	
-	checksum = 0;
-	for (i = 0; i < 64; i += 2) {
-		/* RFC 2289's goofy checksum
-		 * break the hash into pairs of adjacent bits, sum the values
-		 * thus obtained, and use the two least-significant bits */
-		checksum += (hash & (3ULL << i)) >> i;
-	}
-	chunks[5] |= checksum & 3;
-}
-#endif //0
-
-int main(int argc, char **argv, char **envp)
+int main(int argc, char **argv)
 {
 	char *input, *output, *secret, *final, *hashfunc_str;
 	int rounds, ret, hashfunc;
@@ -275,25 +236,25 @@ int main(int argc, char **argv, char **envp)
 		fprintf(stderr, "usage: %s [otp-<hash>] <rounds> <seed>\n", argv[0]);
 		return 1;
 	}
-	
+
 	if (argc > 3) {
-		if (strcmp(argv[1], "otp-md4") == 0) {
+		hashfunc_str = argv[1];
+		argv[1] = argv[2]; /* shift args */
+		argv[2] = argv[3];
+		if (strcmp(hashfunc_str, "otp-md4") == 0) {
 			hashfunc = MHASH_MD4;
-		} else if (strcmp(argv[1], "otp-md5") == 0) {
+		} else if (strcmp(hashfunc_str, "otp-md5") == 0) {
 			hashfunc = MHASH_MD5;
-		} else if (strcmp(argv[1], "otp-sha1") == 0) {
+		} else if (strcmp(hashfunc_str, "otp-sha1") == 0) {
 			hashfunc = MHASH_SHA1;
 		} else {
-			fprintf(stderr, "%s: unknown hash function specified : %s\n",
+			fprintf(stderr, "%s: unknown algorithm specified: %s\n",
 				argv[0], hashfunc_str);
 			return 1;
 		}
-		argv[1] = argv[2]; /* shift args */
-		argv[2] = argv[3];
 	} else {
 		hashfunc = MHASH_MD5;
 	}
-		
 
 	ret = sscanf(argv[1], "%d", &rounds);
 	if (ret < 1 || rounds < 0) {
